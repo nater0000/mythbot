@@ -119,7 +119,7 @@ async function register() {
     email: email.value,
     password: password.value,
     options: {
-      emailRedirectTo: process.env.NUXT_APP_BASE_URL || '/',
+      emailRedirectTo: process.env.NUXT_APP_BASE_URL || '/' + '/auth/login',
     },
   });
 
