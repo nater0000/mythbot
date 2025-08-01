@@ -22,9 +22,9 @@
     </nav>
 
     <!-- Main Content -->
-    <!-- CHANGE: Added a template ref to the main scrolling element -->
-    <main ref="mainContentArea" class="flex-1 p-4 md:p-10 overflow-y-auto">
-      <div v-if="activeStage" class="stage-content active">
+    <main class="flex-1 p-4 md:p-10 overflow-y-auto">
+      <!-- CHANGE: Added a template ref to this wrapper div -->
+      <div ref="contentTop" v-if="activeStage" class="stage-content active">
         <div class="content-card">
 
           <!-- Special template for the Intro page to handle the button click -->
@@ -153,7 +153,7 @@ useHead({
 
 
 // --- DATA & STATE ---
-const mainContentArea = ref(null); // CHANGE: Ref for the main content element
+const contentTop = ref(null); // CHANGE: Ref for the top of the content area
 const compassCanvas = ref(null);
 const synthesisOutputRef = ref(null);
 const copied = ref(false);
@@ -295,10 +295,12 @@ const showStage = (stage) => {
   if (!metamythData.value[stage.id]) {
       metamythData.value[stage.id] = {};
   }
-  // CHANGE: Target the main content area for scrolling
-  if (mainContentArea.value) {
-    mainContentArea.value.scrollTo({ top: 0, behavior: 'smooth' });
-  }
+  // CHANGE: Use nextTick to ensure the element exists before trying to scroll
+  nextTick(() => {
+    if (contentTop.value) {
+      contentTop.value.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  });
 };
 
 const showNextStage = () => {
@@ -398,7 +400,11 @@ onMounted(() => {
   });
   
   if (stages.value.length > 0) {
-    showStage(stages.value[0]);
+    // Don't scroll on initial load
+    activeStage.value = stages.value[0];
+    if (!metamythData.value[activeStage.value.id]) {
+      metamythData.value[activeStage.value.id] = {};
+    }
   }
 });
 
