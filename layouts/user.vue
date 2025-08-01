@@ -1,6 +1,5 @@
 <template>
   <div class="flex flex-col">
-    <StructurePromo />
     <div class="relative">
       <StructureAccentsLoadingbar />
       <StructureAccentsGradient />

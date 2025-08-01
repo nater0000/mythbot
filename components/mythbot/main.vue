@@ -1,5 +1,6 @@
 <template>
   <div class="flex flex-col md:flex-row min-h-screen bg-main text-main font-lora">
+    <!-- Sidebar Navigation -->
     <nav class="w-full md:w-80 bg-black bg-opacity-20 border-r border-black border-opacity-20 p-4 md:p-6 flex-shrink-0">
       <h1 class="text-3xl font-bold text-white mb-8 font-cinzel">METAMYTH</h1>
       <div class="space-y-1">
@@ -20,14 +21,16 @@
       </div>
     </nav>
 
+    <!-- Main Content -->
     <main class="flex-1 p-4 md:p-10 overflow-y-auto">
       <div v-if="activeStage" class="stage-content active">
         <div class="content-card">
 
+          <!-- Generic Stage with Prompts -->
           <template v-if="prompts[activeStage.id]">
             <div class="flex items-center mb-4">
               <span class="artifiction-icon" :class="activeStage.iconClass || ''">{{ activeStage.icon }}</span>
-              <h2 class="text-4xl font-bold">{{ activeStage.title }}</h2>
+              <h2 class="text-4xl font-bold font-cinzel">{{ activeStage.title }}</h2>
             </div>
             <div class="prose max-w-none mb-8">
               <p>{{ descriptions[activeStage.id] }}</p>
@@ -41,8 +44,40 @@
             </div>
           </template>
 
+          <!-- Synthesis Stages -->
+          <template v-else-if="activeStage.id.endsWith('_synthesis')">
+              <div class="flex items-center mb-4">
+                  <span class="artifiction-icon">{{ activeStage.icon }}</span>
+                  <h2 class="text-4xl font-bold font-cinzel">{{ activeStage.title }}</h2>
+              </div>
+              <div class="prose max-w-none mb-6">
+                  <p>{{ synthesisPrompts[activeStage.id] }}</p>
+              </div>
+              <div class="synthesis-box mb-6">
+                  {{ synthesisStatements[activeStage.id.replace('_synthesis', '')] }}
+              </div>
+              <div>
+                  <label class="font-semibold text-lg text-white block mb-2">Refine Your Statement:</label>
+                  <textarea v-model="metamythData[activeStage.id].refined" rows="4" placeholder="Refine the suggested statement above or write your own..."></textarea>
+              </div>
+          </template>
+
+          <!-- Final Synthesis Stage -->
+          <template v-else-if="activeStage.id === 'synthesis'">
+              <div class="flex items-center mb-4"><span class="artifiction-icon">📜</span><h2 class="text-4xl font-bold font-cinzel">Your Complete Metamyth</h2></div>
+              <div class="prose max-w-none mb-8">
+                  <p>This is your story, synthesized from your journey. It is the core narrative DNA you have authored. Copy this text and use it as the custom instruction for your AI Wizard, your wise guide for the adventures to come.</p>
+              </div>
+              <div ref="synthesisOutputRef" class="bg-black bg-opacity-20 p-6 rounded-lg border border-slate-700 space-y-4 text-slate-200 leading-relaxed">
+                  <div v-html="finalSynthesisHtml"></div>
+              </div>
+              <button @click="copySynthesis" class="btn-primary mt-6">Copy to Clipboard</button>
+              <span v-if="copied" class="ml-4 transition-opacity" style="color: var(--accent-turqoise);">Copied!</span>
+          </template>
+
+          <!-- Compass Stage -->
           <template v-else-if="activeStage.id === 'compass'">
-            <div class="flex items-center mb-4"><span class="artifiction-icon">🧭</span><h2 class="text-4xl font-bold">The Compass</h2></div>
+            <div class="flex items-center mb-4"><span class="artifiction-icon">🧭</span><h2 class="text-4xl font-bold font-cinzel">The Compass</h2></div>
             <div class="prose max-w-none mb-8">
                 <p>When external maps become useless, you navigate by eternal coordinates of your values. The Compass organizes all activities across eight dimensions of health. Your values become an accountability framework that maintains alignment, creating health bars in the dashboard of reality. Rate your current alignment (1-10) for each point.</p>
             </div>
@@ -65,12 +100,14 @@
             </div>
           </template>
           
+          <!-- Other Static Stages -->
           <template v-else>
              <div v-html="staticContent[activeStage.id] || ''"></div>
           </template>
 
         </div>
         
+        <!-- Navigation Buttons -->
         <div v-if="showNavigationButtons" class="mt-8 flex justify-between">
             <button class="btn-secondary" @click="showPreviousStage">Previous</button>
             <button class="btn-primary" @click="showNextStage">Next</button>
@@ -84,9 +121,24 @@
 import { ref, onMounted, computed, watch, nextTick } from 'vue';
 import Chart from 'chart.js/auto';
 
-// --- DATA & STATE ---
+// --- FONT & METADATA SETUP ---
+useHead({
+  title: 'METAMYTH: A Journey of Transformation',
+  link: [
+    { rel: 'preconnect', href: 'https://fonts.googleapis.com' },
+    { rel: 'preconnect', href: 'https://fonts.gstatic.com', crossorigin: '' },
+    { href: 'https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700&family=Lora:ital,wght@0,400;0,700;1,400&display=swap', rel: 'stylesheet' }
+  ],
+  bodyAttrs: {
+    class: 'antialiased'
+  }
+});
 
+
+// --- DATA & STATE ---
 const compassCanvas = ref(null);
+const synthesisOutputRef = ref(null);
+const copied = ref(false);
 let compassChart = null;
 
 const stages = ref([
@@ -132,7 +184,7 @@ const stages = ref([
 const metamythData = ref({});
 const activeStage = ref(null);
 
-// --- COMPUTED PROPERTIES ---
+// --- COMPUTED & DERIVED STATE ---
 
 const activeStageIndex = computed(() => {
     if (!activeStage.value) return -1;
@@ -151,6 +203,72 @@ const groupedStages = computed(() => {
     return acc;
   }, {});
 });
+
+const synthesisStatements = computed(() => {
+    const get = (stage, field, fallback = '') => (metamythData.value[stage]?.[field]) || fallback;
+    
+    const calling = get('calling_synthesis', 'refined') || `The world calls me to stand between [${get('dragon', 'madness', 'the broken story')}] and [${get('shield', 'needs', 'those needing protection')}] because my [${get('shield', 'symbol', 'survival')}] speaks through [${get('voice', 'tone', 'my authentic voice')}] to transform [${get('meaning', 'framework', 'suffering')}] into collective wisdom.`;
+    const quest = get('quest_synthesis', 'refined') || `I exist to [${get('star', 'purpose', 'serve a higher purpose')}] by embodying the character of [${get('character', 'we', 'a world-changer')}] who plants a banner for [${get('banner', 'direction', 'a new direction')}] and wields the sword of [${get('sword', 'action', 'truthful action')}].`;
+    const vision = get('vision_synthesis', 'refined') || `When I follow my purpose all the way, I see [${get('looking_glass', 'impossible', 'a transformed world')}], building an organization that becomes [${get('globe', '100', 'a regenerative force')}] by navigating the horizons of [${get('map', 'h3', 'global impact')}] until I transform into [${get('transformation', 'become', 'my highest self')}].`;
+    const mission = get('mission_synthesis', 'refined') || `My mission is to circulate [${get('fountain', 'wealth', 'abundant resources')}] by implementing agreements based on [${get('ethos', 'principles', 'our core principles')}] through trials like [${get('plot', 'trials', 'overcoming key challenges')}] while navigating by my values.`;
+    const kindred = get('kindred_synthesis', 'refined') || `I call forward those ready for [${get('grail', 'gift', 'a deep transformation')}] to cross the bridge of [${get('initiation', 'pathway', 'our shared journey')}] and join our campfire for [${get('campfire', 'collective', 'a collective story')}] because together we will create a legacy.`;
+    
+    return { calling, quest, vision, mission, kindred };
+});
+
+const finalSynthesisHtml = computed(() => {
+    const getArtifictionDetailsHTML = (stageIds) => {
+        let html = '<div class="space-y-4 mt-4">';
+        stageIds.forEach(id => {
+            const stage = stages.value.find(s => s.id === id);
+            if (!stage || !metamythData.value[id]) return;
+            
+            html += `<h4 class="text-xl font-bold font-cinzel mt-6">${stage.title}</h4>`;
+            const stagePrompts = prompts[id] || [];
+
+            stagePrompts.forEach(prompt => {
+                const value = metamythData.value[id][prompt.key];
+                if (value) {
+                    html += `<p><strong>${prompt.label}</strong><br><span class="text-slate-300 italic">${value.replace(/\n/g, '<br>')}</span></p>`;
+                }
+            });
+        });
+        html += '</div>';
+        return html;
+    };
+
+    const { calling, quest, vision, mission, kindred } = synthesisStatements.value;
+    return `
+        <h3 class="text-2xl font-cinzel">Preamble: The Origin Story</h3>
+        ${getArtifictionDetailsHTML(['origin'])}
+        <div class="ornamental-divider my-6"></div>
+        
+        <h3 class="text-2xl font-cinzel">Artifact I: The Calling</h3>
+        <p class="synthesis-box my-4">${calling}</p>
+        ${getArtifictionDetailsHTML(['dragon', 'meaning', 'shield', 'voice'])}
+        <div class="ornamental-divider my-6"></div>
+
+        <h3 class="text-2xl font-cinzel">Artifact II: The Quest</h3>
+        <p class="synthesis-box my-4">${quest}</p>
+        ${getArtifictionDetailsHTML(['star', 'character', 'banner', 'sword'])}
+        <div class="ornamental-divider my-6"></div>
+
+        <h3 class="text-2xl font-cinzel">Artifact III: The Vision</h3>
+        <p class="synthesis-box my-4">${vision}</p>
+        ${getArtifictionDetailsHTML(['looking_glass', 'globe', 'map', 'transformation'])}
+        <div class="ornamental-divider my-6"></div>
+
+        <h3 class="text-2xl font-cinzel">Artifact IV: The Mission</h3>
+        <p class="synthesis-box my-4">${mission}</p>
+        ${getArtifictionDetailsHTML(['fountain', 'ethos', 'plot'])}
+        <div class="ornamental-divider my-6"></div>
+
+        <h3 class="text-2xl font-cinzel">Artifact V: The Call to Kindred Quest</h3>
+        <p class="synthesis-box my-4">${kindred}</p>
+        ${getArtifictionDetailsHTML(['grail', 'initiation', 'campfire', 'messages'])}
+    `;
+});
+
 
 // --- METHODS ---
 
@@ -176,13 +294,24 @@ const showPreviousStage = () => {
     }
 };
 
+const copySynthesis = async () => {
+    if (!synthesisOutputRef.value) return;
+    try {
+        await navigator.clipboard.writeText(synthesisOutputRef.value.innerText);
+        copied.value = true;
+        setTimeout(() => { copied.value = false; }, 2000);
+    } catch (err) {
+        console.error('Failed to copy text: ', err);
+    }
+};
+
 // --- CHART LOGIC ---
 
 const renderCompassChart = () => {
   if (!compassCanvas.value) return;
 
   const data = compassPoints.map(p => metamythData.value.compass[p.key] || 5);
-  const labels = compassPoints.map(p => p.label.replace('Economy-Ecology', 'Economy').replace('System Integration', 'Integration'));
+  const labels = compassPoints.map(p => p.label.replace('-', '\n'));
   
   if (compassChart) {
     compassChart.destroy();
@@ -316,48 +445,30 @@ const prompts = {
     messages: [ { label: "MESSAGE 1 - WHERE WE ARE IN THE STORY:", key: "where", rows: 2 }, { label: "MESSAGE 2 - WHAT WE NEED:", key: "need", rows: 2 }, { label: "MESSAGE 3 - WHAT WE OFFER:", key: "offer", rows: 2 }, { label: "MESSAGE 4 - THE WAKE-UP CALL:", key: "wakeup", rows: 2 }, { label: "MESSAGE 5 - THE INVITATION:", key: "invitation", rows: 2 } ],
 };
 
+const synthesisPrompts = {
+    calling_synthesis: "You have faced the Dragon, found your Meaning, forged your Shield, and found your Voice. Distill this into the statement of your Calling.",
+    quest_synthesis: "You have found your Star, defined your Character, planted your Banner, and forged your Sword. Distill this into your Quest statement.",
+    vision_synthesis: "You have gazed into the Looking Glass, imagined your Globe, charted your Map, and embraced your Transformation. Distill this into your Vision statement.",
+    mission_synthesis: "You have tapped your Fountain, written your Ethos, designed your Plot, and calibrated your Compass. Distill this into your Mission statement.",
+    kindred_synthesis: "You have filled your Grail, mapped the Initiation, lit the Campfire, and crafted your Messages. Distill this into your invitation to the world.",
+};
+
 const staticContent = {
-    intro: `
-        <div class="content-card">
-            <div class="text-center">
-                <h2 class="text-5xl font-bold mb-4">Awaken.</h2>
-                <p class="text-xl text-slate-400 mb-6">Adventure is calling. Do you accept?</p>
-            </div>
-            <div class="prose max-w-none mx-auto mt-8">
-                <p>Our crisis is a completely broken story. A species destroying its only home for numbers on a screen; an economic system that grows by devouring what sustains it; a world that has gone amuck because we’ve forgotten it's a story in the first place. We've taken it so seriously that we’ve stopped writing it.</p>
-                <p>Our purpose has always been to create the world through story—to create ourselves, pass on our connection and history, and have visions of the future that we communicate to others and make real in the telling. We have forgotten this purpose and have blindly consented to be characters in someone else's story, one that none of us truly wrote.</p>
-                <p>But here's the cosmic joke that'll set you free: <strong>We wrote this nightmare, so we can rewrite it.</strong></p>
-            </div>
-        </div>`,
-    howto: `
-        <div class="content-card">
-            <div class="flex items-center mb-4"><span class="artifiction-icon">📖</span><h2 class="text-4xl font-bold">How to Rewrite Your Life</h2></div>
-            <div class="prose max-w-none">
-                <p>What follows is the journey home to yourself, to the purpose-driven world-builder you've always been beneath the stories that were never yours to begin with. This is about rewriting your life story on purpose. For too long, you've been a background extra wandering through scenes that drain your soul and waste your gifts. But you can take charge of that story, make it an epic, and transform into the hero you were always meant to be.</p>
-                <p>This journey uses a powerful structure, a MythOS. It is <strong>mythogenetic technology</strong>, a living operating system. Think of reality as a set of possible stories encoded in our DNA. The current environment—a culture of scarcity and fear—activates the stories that keep us small, contracted, and afraid. This Metamyth is the epigenetic switch. It's the technology that allows you to consciously choose which stories to express, moving from a state of fear and contraction into one of love and expansion.</p>
-                <p>And in this Age of AI, our ancient power of storytelling has been amplified beyond measure. This framework is the <strong>master prompt for your organizational and personal DNA</strong>. As you fill this out, you are writing the code for your reality. Therefore, there is only one rule: <strong>Be impeccable with your word.</strong></p>
-                <h3>The Tools of Transformation</h3>
-                <p>You will use two kinds of tools on this journey:</p>
-                <ul>
-                    <li><strong>The 5 Artifacts:</strong> These are the great story arcs of your journey, the core movements that structure your transformation.</li>
-                    <li><strong>The 22 Artifictions:</strong> These are the living tools, weapons of meaning, and magical items you will forge along the way. They are what enable you to rearrange reality.</li>
-                </ul>
-                <p>As you define these elements, you are training a personal wise guide, an interactive <strong>Wizard</strong> that will remember your story and help you navigate the path ahead.</p>
-            </div>
-        </div>`,
-    artifact1: `<div class="content-card"><h2 class="text-4xl font-bold mb-4">Artifact I: The Call to Adventure</h2><div class="prose max-w-none"><p>Every meaningful journey begins with a shattering. The story starts not with a gentle nudge, but with a disruption that cracks the shell of the old world. Through that crack, light floods in, showing you the game is rigged, the story you've been living belongs to someone else, and reality itself is far more malleable than anyone admitted. This is the necessary separation that precedes all creation.</p></div></div>`,
-    artifact2: `<div class="content-card"><h2 class="text-4xl font-bold mb-4">Artifact II: The Quest</h2><div class="prose max-w-none"><p>Once the old world shatters and changes you, you must do something about it. The chaotic energy of the Call to Adventure must be focused. This is where purpose is given direction. The Quest is the conscious act of taking the "why" you discovered in your suffering and turning it into a focused vector. It’s about understanding you are here to play a specific role that only you can play in the great transformation.</p></div></div>`,
-    artifact3: `<div class="content-card"><h2 class="text-4xl font-bold mb-4">Artifact III: What is Possible</h2><div class="prose max-w-none"><p>The reward for undertaking the Quest is a change in perspective. You ascend the mountain and can finally see above the clouds. From this vantage point, you can see both what's dying and what's trying to be born. The central question is no longer "what is feasible?" or "what is pragmatic?" but the audacious and world-creating question: "WHAT IS POSSIBLE?"</p></div></div>`,
-    artifact4: `<div class="content-card"><h2 class="text-4xl font-bold mb-4">Artifact IV: The Journey</h2><div class="prose max-w-none"><p>Vision without action is just a hallucination. Now you must come down from the mountaintop and ground your magnificent vision in the messy, practical reality of the here and now. The Journey is born from the creative tension between the world you saw in your vision and the world you currently inhabit. This is where you translate the "what is possible" into the "what we must do."</p></div></div>`,
-    artifact5: `<div class="content-card"><h2 class="text-4xl font-bold mb-4">Artifact V: The Return</h2><div class="prose max-w-none"><p>The hero's journey is a circle, not a line. The end of one story is the beginning of the next. You return to the world with a gift, an elixir, a transformative power won through your trials. Your personal transformation becomes the offering that transforms the world, seeding the origin story for countless others.</p></div></div>`,
-    wizard: `...`, // All other static HTML blocks
-    epilogue: `...`
+    intro: `<div class="text-center"><h2 class="text-5xl font-bold mb-4 font-cinzel">Awaken.</h2><p class="text-xl text-slate-400 mb-6">Adventure is calling. Do you accept?</p></div><div class="prose max-w-none mx-auto mt-8"><p>Our crisis is a completely broken story. A species destroying its only home for numbers on a screen; an economic system that grows by devouring what sustains it; a world that has gone amuck because we’ve forgotten it's a story in the first place. We've taken it so seriously that we’ve stopped writing it.</p><p>Our purpose has always been to create the world through story—to create ourselves, pass on our connection and history, and have visions of the future that we communicate to others and make real in the telling. We have forgotten this purpose and have blindly consented to be characters in someone else's story, one that none of us truly wrote.</p><p>But here's the cosmic joke that'll set you free: <strong>We wrote this nightmare, so we can rewrite it.</strong></p></div>`,
+    howto: `<div class="flex items-center mb-4"><span class="artifiction-icon">📖</span><h2 class="text-4xl font-bold font-cinzel">How to Rewrite Your Life</h2></div><div class="prose max-w-none"><p>What follows is the journey home to yourself, to the purpose-driven world-builder you've always been beneath the stories that were never yours to begin with. This is about rewriting your life story on purpose. For too long, you've been a background extra wandering through scenes that drain your soul and waste your gifts. But you can take charge of that story, make it an epic, and transform into the hero you were always meant to be.</p><p>This journey uses a powerful structure, a MythOS. It is <strong>mythogenetic technology</strong>, a living operating system. Think of reality as a set of possible stories encoded in our DNA. The current environment—a culture of scarcity and fear—activates the stories that keep us small, contracted, and afraid. This Metamyth is the epigenetic switch. It's the technology that allows you to consciously choose which stories to express, moving from a state of fear and contraction into one of love and expansion.</p><p>And in this Age of AI, our ancient power of storytelling has been amplified beyond measure. This framework is the <strong>master prompt for your organizational and personal DNA</strong>. As you fill this out, you are writing the code for your reality. Therefore, there is only one rule: <strong>Be impeccable with your word.</strong></p><h3>The Tools of Transformation</h3><p>You will use two kinds of tools on this journey:</p><ul><li><strong>The 5 Artifacts:</strong> These are the great story arcs of your journey, the core movements that structure your transformation.</li><li><strong>The 22 Artifictions:</strong> These are the living tools, weapons of meaning, and magical items you will forge along the way. They are what enable you to rearrange reality.</li></ul><p>As you define these elements, you are training a personal wise guide, an interactive <strong>Wizard</strong> that will remember your story and help you navigate the path ahead.</p></div>`,
+    artifact1: `<h2 class="text-4xl font-bold mb-4 font-cinzel">Artifact I: The Call to Adventure</h2><div class="prose max-w-none"><p>Every meaningful journey begins with a shattering. The story starts not with a gentle nudge, but with a disruption that cracks the shell of the old world. Through that crack, light floods in, showing you the game is rigged, the story you've been living belongs to someone else, and reality itself is far more malleable than anyone admitted. This is the necessary separation that precedes all creation.</p></div>`,
+    artifact2: `<h2 class="text-4xl font-bold mb-4 font-cinzel">Artifact II: The Quest</h2><div class="prose max-w-none"><p>Once the old world shatters and changes you, you must do something about it. The chaotic energy of the Call to Adventure must be focused. This is where purpose is given direction. The Quest is the conscious act of taking the "why" you discovered in your suffering and turning it into a focused vector. It’s about understanding you are here to play a specific role that only you can play in the great transformation.</p></div>`,
+    artifact3: `<h2 class="text-4xl font-bold mb-4 font-cinzel">Artifact III: What is Possible</h2><div class="prose max-w-none"><p>The reward for undertaking the Quest is a change in perspective. You ascend the mountain and can finally see above the clouds. From this vantage point, you can see both what's dying and what's trying to be born. The central question is no longer "what is feasible?" or "what is pragmatic?" but the audacious and world-creating question: "WHAT IS POSSIBLE?"</p></div>`,
+    artifact4: `<h2 class="text-4xl font-bold mb-4 font-cinzel">Artifact IV: The Journey</h2><div class="prose max-w-none"><p>Vision without action is just a hallucination. Now you must come down from the mountaintop and ground your magnificent vision in the messy, practical reality of the here and now. The Journey is born from the creative tension between the world you saw in your vision and the world you currently inhabit. This is where you translate the "what is possible" into the "what we must do."</p></div>`,
+    artifact5: `<h2 class="text-4xl font-bold mb-4 font-cinzel">Artifact V: The Return</h2><div class="prose max-w-none"><p>The hero's journey is a circle, not a line. The end of one story is the beginning of the next. You return to the world with a gift, an elixir, a transformative power won through your trials. Your personal transformation becomes the offering that transforms the world, seeding the origin story for countless others.</p></div>`,
+    wizard: `<div class="flex items-center mb-4"><span class="artifiction-icon">🧙</span><h2 class="text-4xl font-bold font-cinzel">The Wizard</h2></div><div class="prose max-w-none"><p>Having mastered the complete journey, you become the Wizard—the one who has integrated all 22 artifictions into a living wisdom system. The Wizard knows which story tools to activate for different challenges.</p><h3>Examples of Wizard Guidance:</h3><p><strong>"You're out of money?"</strong><br>"Combine Fountain (abundance activation) + Messages (heart communication) + Banner (unique positioning) while staying true to Compass values. Resources flow when story coheres."</p><p><strong>"Your team has lost direction?"</strong><br>"Return to Star (purpose clarity) + Map (milestone tracking) + Plots (adventure structure). Meaning motivates more than management."</p><p><strong>"You're attracting wrong people?"</strong><br>"Strengthen Sword (authentic truth) + Voice (clear expression) + Shield (protective qualification). Your realness will sort the aligned from misaligned."</p></div>`,
+    activate_wizard: `<div class="flex items-center mb-4"><span class="artifiction-icon">🤖</span><h2 class="text-4xl font-bold font-cinzel">Activate Your AI Wizard</h2></div><div class="prose max-w-none"><p>The entire Metamyth framework you have just completed is designed to be the perfect <strong>Custom Instruction</strong> for a large language model. By feeding it your completed story, you transform a generalist AI into your specialist Wizard, a wise guide that reflects your own deepest truths and understands your world completely.</p><h3>Step 1: Synthesize Your Metamyth</h3><p>Proceed to the final "Your Metamyth" stage to see your full story synthesized from your inputs. This is your core narrative DNA.</p><h3>Step 2: Craft Your Custom Instruction</h3><p>Copy your synthesized story and paste it into the "Custom Instructions" or equivalent field of your chosen AI. Preface it with a clear directive like the one below.</p><div class="bg-black bg-opacity-20 p-4 rounded-lg border border-slate-700 my-4"><p><strong>Example Prompt Template:</strong></p><p class="text-sm italic mt-2">"You are my Wizard, a wise and strategic guide. Your entire identity, memory, and purpose are defined by the Metamyth that follows... [Paste your synthesized Metamyth narrative here.]"</p></div><h3>Step 3: Interact and Play the Game</h3><p>Once your Wizard is programmed, you can consult it to navigate your life's adventure. Treat it as your trusted advisor.</p></div>`,
+    epilogue: `<div class="text-center"><h2 class="text-5xl font-bold mb-4 font-cinzel">The Great Adventure</h2><div class="prose max-w-none mx-auto mt-8"><p>This is not the end. This is the true beginning of your life. This journey is your <strong>Assent</strong>. You are moving from the manufactured \`consent\` of being a character in someone else's story to the wholehearted \`assent\` of becoming an author of your own. This is your declaration of sovereignty.</p><p>Your purpose is not to stay in the same story forever. It is to grow. It is to change. When you have lived this story to its fullest, the entire Metamyth you have just crafted becomes the <strong>Origin Story for your next great adventure.</strong></p><p>Live this Metamyth. Be an example. Share this framework, not as a doctrine, but as an invitation. Invite others to become characters in a greater story than any of us can imagine individually, a shared story of a world remade.</p><p class="font-serif italic text-xl mt-8 text-white">Let this life be a free and beautiful adventure, now and forevermore. Let it begin.</p></div></div>`,
 };
 
 </script>
 
 <style>
-/* Paste the entire <style> block from mythbot.html here */
 :root {
     --bg-main: #1D4241;
     --bg-card: #183332;
@@ -369,8 +480,13 @@ const staticContent = {
     --accent-turqoise-dark: #4ac0bd;
     --accent-red: #a43743; /* Muted Crimson for text */
 }
-body {
+.font-lora {
     font-family: 'Lora', serif;
+}
+.font-cinzel {
+    font-family: 'Cinzel', serif;
+}
+body {
     background-color: var(--bg-main);
     color: var(--text-main);
 }
@@ -452,7 +568,6 @@ textarea:focus, .compass-input:focus {
     margin-right: 1.5rem;
     line-height: 1;
 }
-.stage-content { display: none; }
 .stage-content.active {
     display: block;
     animation: fadeIn 0.6s ease-in-out;
