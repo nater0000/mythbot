@@ -32,9 +32,9 @@ export default {
       menus: [
         [
           {
-            label: "Dashboard",
+            label: "Mythbot",
             icon: "i-heroicons-home",
-            to: "/user/dashboard",
+            to: "/user/mythbot",
             exact: true,
           },
           {
