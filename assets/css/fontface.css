@@ -1,0 +1,20 @@
+@font-face {
+  font-family: "Gheist";
+  src: url("../fonts/GeistVF.woff2") format("woff2-variations");
+  font-weight: 100 900;
+}
+
+* {
+  font-family: "Gheist", sans-serif;
+}
+
+/* Prevents iOS zoom on input focus */
+input[type="text"],
+input[type="password"],
+input[type="email"],
+input[type="search"],
+input[type="url"],
+input[type="tel"],
+textarea {
+  font-size: 16px;
+}
