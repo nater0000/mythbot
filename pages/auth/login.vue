@@ -71,23 +71,6 @@
           >
         </div>
       </form>
-      <div class="relative">
-        <UDivider label="Or continue with" />
-        </div>
-      <div class="flex flex-col space-y-4">
-        <UButton
-          block
-          color="white"
-          v-for="provider in providers"
-          :key="provider.name"
-          @click="provider.auth"
-        >
-          <template #leading>
-            <UIcon :name="provider.icon" class="mr-2 h-4 w-4" />
-          </template>
-          Sign in with {{ provider.name }}
-        </UButton>
-      </div>
     </div>
     <p class="px-8 text-center text-sm text-muted-foreground">
       By clicking continue, you agree to our
@@ -117,8 +100,8 @@ const toast = useToast();
 // Component state
 const loading = ref(false);
 const form = reactive({
-  email: "test@github.com",
-  password: "password",
+  email: "",
+  password: "",
 });
 
 const providers = [

@@ -15,10 +15,8 @@
         <StructureLogo />
         <div class="my-auto">
           <div class="text-left">
-            <HomeGithubBadge />
             <h2 class="text-5xl font-bold text-white relative">
-              Nuxt 3 <span class="text-green-400">Supabase</span><br />
-              Template
+              Metamyth <span class="text-green-400">AI</span><br />
             </h2>
           </div>
         </div>

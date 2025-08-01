@@ -77,9 +77,6 @@
           >
         </div>
       </form>
-      <div class="relative">
-        <UDivider label="Or continue with" />
-        </div>
     </div>
   </div>
 </template>
