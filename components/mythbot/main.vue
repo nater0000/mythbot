@@ -22,11 +22,12 @@
     </nav>
 
     <!-- Main Content -->
-    <main class="flex-1 p-4 md:p-10 overflow-y-auto">
+    <!-- CHANGE: Added a template ref to the main scrolling element -->
+    <main ref="mainContentArea" class="flex-1 p-4 md:p-10 overflow-y-auto">
       <div v-if="activeStage" class="stage-content active">
         <div class="content-card">
 
-          <!-- CHANGE: Special template for the Intro page to handle the button click -->
+          <!-- Special template for the Intro page to handle the button click -->
           <template v-if="activeStage.id === 'intro'">
             <div class="text-center">
                 <h2 class="text-5xl font-bold mb-4 font-cinzel">Awaken.</h2>
@@ -152,6 +153,7 @@ useHead({
 
 
 // --- DATA & STATE ---
+const mainContentArea = ref(null); // CHANGE: Ref for the main content element
 const compassCanvas = ref(null);
 const synthesisOutputRef = ref(null);
 const copied = ref(false);
@@ -293,8 +295,10 @@ const showStage = (stage) => {
   if (!metamythData.value[stage.id]) {
       metamythData.value[stage.id] = {};
   }
-  // CHANGE: Scroll to top on every stage change
-  window.scrollTo({ top: 0, behavior: 'smooth' });
+  // CHANGE: Target the main content area for scrolling
+  if (mainContentArea.value) {
+    mainContentArea.value.scrollTo({ top: 0, behavior: 'smooth' });
+  }
 };
 
 const showNextStage = () => {
@@ -471,7 +475,6 @@ const synthesisPrompts = {
 };
 
 const staticContent = {
-    // CHANGE: Removed 'intro' from here as it's now a dedicated template block
     howto: `<div class="flex items-center mb-4"><span class="artifiction-icon">📖</span><h2 class="text-4xl font-bold font-cinzel">How to Rewrite Your Life</h2></div><div class="prose max-w-none"><p>What follows is the journey home to yourself, to the purpose-driven world-builder you've always been beneath the stories that were never yours to begin with. This is about rewriting your life story on purpose. For too long, you've been a background extra wandering through scenes that drain your soul and waste your gifts. But you can take charge of that story, make it an epic, and transform into the hero you were always meant to be.</p><p>This journey uses a powerful structure, a MythOS. It is <strong>mythogenetic technology</strong>, a living operating system. Think of reality as a set of possible stories encoded in our DNA. The current environment—a culture of scarcity and fear—activates the stories that keep us small, contracted, and afraid. This Metamyth is the epigenetic switch. It's the technology that allows you to consciously choose which stories to express, moving from a state of fear and contraction into one of love and expansion.</p><p>And in this Age of AI, our ancient power of storytelling has been amplified beyond measure. This framework is the <strong>master prompt for your organizational and personal DNA</strong>. As you fill this out, you are writing the code for your reality. Therefore, there is only one rule: <strong>Be impeccable with your word.</strong></p><h3>The Tools of Transformation</h3><p>You will use two kinds of tools on this journey:</p><ul><li><strong>The 5 Artifacts:</strong> These are the great story arcs of your journey, the core movements that structure your transformation.</li><li><strong>The 22 Artifictions:</strong> These are the living tools, weapons of meaning, and magical items you will forge along the way. They are what enable you to rearrange reality.</li></ul><p>As you define these elements, you are training a personal wise guide, an interactive <strong>Wizard</strong> that will remember your story and help you navigate the path ahead.</p></div>`,
     artifact1: `<h2 class="text-4xl font-bold mb-4 font-cinzel">Artifact I: The Call to Adventure</h2><div class="prose max-w-none"><p>Every meaningful journey begins with a shattering. The story starts not with a gentle nudge, but with a disruption that cracks the shell of the old world. Through that crack, light floods in, showing you the game is rigged, the story you've been living belongs to someone else, and reality itself is far more malleable than anyone admitted. This is the necessary separation that precedes all creation.</p></div>`,
     artifact2: `<h2 class="text-4xl font-bold mb-4 font-cinzel">Artifact II: The Quest</h2><div class="prose max-w-none"><p>Once the old world shatters and changes you, you must do something about it. The chaotic energy of the Call to Adventure must be focused. This is where purpose is given direction. The Quest is the conscious act of taking the "why" you discovered in your suffering and turning it into a focused vector. It’s about understanding you are here to play a specific role that only you can play in the great transformation.</p></div>`,
