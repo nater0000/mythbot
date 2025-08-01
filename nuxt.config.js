@@ -21,7 +21,7 @@ export default defineNuxtConfig({
       middlewareOptions: {
         loginRoute: '/auth/login',
         registerRoute: '/auth/register',
-        authenticatedBasePath: '/user/dashboard',
+        authenticatedBasePath: '/user/mythbot',
       }
     }
   },
